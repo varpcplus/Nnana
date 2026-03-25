@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mines</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #0a0a0f;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 100px;
+            position: relative;
+        }
+
+        /* Фоновые эффекты */
+        .glow-top {
+            position: fixed;
+            top: -10%;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 120, 255, 0.2) 0%,
+                rgba(0, 80, 255, 0.08) 40%,
+                transparent 100%
+            );
+            filter: blur(60px);
+            animation: breathe 8s ease-in-out infinite;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .glow-bottom {
+            position: fixed;
+            bottom: -10%;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: linear-gradient(
+                to top,
+                rgba(0, 120, 255, 0.2) 0%,
+                rgba(0, 80, 255, 0.08) 40%,
+                transparent 100%
+            );
+            filter: blur(60px);
+            animation: breathe 8s ease-in-out infinite;
+            animation-delay: -4s;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        @keyframes breathe {
+            0%, 100% { 
+                opacity: 0.6;
+                transform: scaleY(0.9);
+            }
+            50% { 
+                opacity: 1;
+                transform: scaleY(1.1);
+            }
+        }
+
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at 50% 50%,
+                transparent 0%,
+                rgba(0,0,0,0.4) 100%
+            );
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Deposit Modal */
+        .deposit-modal {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(20, 20, 25, 0.95);
+            border-radius: 32px 32px 0 0;
+            padding: 28px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1001;
+            max-height: 70vh;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+        }
+
+        .deposit-modal.active {
+            transform: translateY(0);
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .instruction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .instruction-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .step-num {
+            width: 28px;
+            height: 28px;
+            background: rgba(0,122,255,0.2);
+            color: #007AFF;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            font-size: 15px;
+            line-height: 1.4;
+            color: rgba(255,255,255,0.9);
+            padding-top: 4px;
+        }
+
+        .step-text strong {
+            color: white;
+            font-weight: 700;
+        }
+
+        .time-notice {
+            background: rgba(255,193,7,0.1);
+            border: 1px solid rgba(255,193,7,0.2);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            color: #FFC107;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 17px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 16px;
+            background: transparent;
+            color: rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:active {
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Balance */
+        .balance-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.08);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .star-icon {
+            width: 16px;
+            height: 16px;
+            background: #444;
+            border-radius: 50%;
+        }
+
+        /* Game Grid */
+        .game-box {
+            background: rgba(30,30,35,0.6);
+            border-radius: 20px;
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .grid-5x5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .cell:active:not(.revealed) {
+            transform: scale(0.92);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .cell.revealed {
+            cursor: default;
+        }
+
+        .cell.safe {
+            background: rgba(48,209,88,0.15);
+        }
+
+        .cell.mine {
+            background: rgba(255,59,48,0.15);
+        }
+
+        .cell.exploded {
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        .cell img {
+            width: 65%;
+            height: 65%;
+            object-fit: contain;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: block;
+        }
+
+        .cell.revealed img {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .cell.disabled {
+            pointer-events: none;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .control-box {
+            flex: 1;
+            background: rgba(30,30,35,0.6);
+            border-radius: 20px;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stepper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 4px;
+            height: 44px;
+        }
+
+        .step-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.15s;
+        }
+
+        .step-btn:active {
+            background: rgba(255,255,255,0.25);
+            transform: scale(0.9);
+        }
+
+        .step-value {
+            font-weight: 700;
+            font-size: 16px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .bet-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            outline: none;
+            padding: 0;
+            height: 32px;
+        }
+
+        /* Action Button */
+        .action-container {
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 24px;
+            font-size: 18px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .action-btn.bet {
+            background: #007AFF;
+            color: white;
+        }
+
+        .action-btn.cashout {
+            background: #30D158;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .action-btn:disabled {
+            background: #333;
+            color: rgba(255,255,255,0.3);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(48,209,88,0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(48,209,88,0); }
+        }
+
+        .btn-main {
+            font-size: 18px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .btn-sub {
+            font-size: 13px;
+            opacity: 0.9;
+            line-height: 1;
+            margin-top: 2px;
+        }
+
+        /* Bottom Tabs */
+        .bottom-tabs {
+            position: fixed;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(40,40,45,0.7);
+            border-radius: 24px;
+            padding: 4px;
+            display: flex;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            z-index: 100;
+        }
+
+        .tab-btn {
+            width: 110px;
+            padding: 10px 0;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 20px;
+            position: relative;
+            z-index: 2;
+            transition: color 0.3s;
+        }
+
+        .tab-btn.active {
+            color: white;
+        }
+
+        .tab-slider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: rgba(255,255,255,0.12);
+            border-radius: 20px;
+            transition: transform 0.3s;
+            z-index: 1;
+        }
+
+        /* Profile */
+        .profile-card {
+            background: rgba(30,30,35,0.6);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .avatar-block {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .profile-balance {
+            font-size: 16px;
+            font-weight: 700;
+            color: #FFD700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .deposit-btn {
+            width: 100%;
+            padding: 16px;
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 18px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .deposit-btn:active {
+            transform: scale(0.98);
+            background: #0056b3;
+        }
+
+        /* Profile Tabs */
+        .profile-tabs-container {
+            background: rgba(30,30,35,0.6);
+            border-radius: 24px;
+            padding: 4px;
+            display: flex;
+            position: relative;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .profile-tab-btn {
+            flex: 1;
+            padding: 10px 0;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 20px;
+            position: relative;
+            z-index: 2;
+            transition: color 0.3s;
+        }
+
+        .profile-tab-btn.active {
+            color: white;
+        }
+
+        .profile-tab-slider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            transition: transform 0.3s;
+            z-index: 1;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+        }
+
+        .hist-title {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .hist-meta {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .hist-amount {
+            font-weight: 800;
+            font-size: 16px;
+        }
+
+        .hist-amount.win {
+            color: #30D158;
+        }
+
+        .hist-amount.loss {
+            color: #FF453A;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255,255,255,0.3);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Фоновые эффекты -->
+    <div class="glow-top"></div>
+    <div class="glow-bottom"></div>
+    <div class="vignette"></div>
+
+    <!-- Deposit Modal -->
+    <div class="overlay" id="depositOverlay" onclick="closeDepositModal()"></div>
+    <div class="deposit-modal" id="depositModal">
+        <div class="modal-title">Deposit Funds</div>
+        
+        <div class="instruction-list">
+            <div class="instruction-item">
+                <div class="step-num">1</div>
+                <div class="step-text">Open our bot <strong>@YourBotName</strong></div>
+            </div>
+            <div class="instruction-item">
+                <div class="step-num">2</div>
+                <div class="step-text">Send command <strong>/dep</strong> or <strong>/deposit</strong></div>
+            </div>
+            <div class="instruction-item">
+                <div class="step-num">3</div>
+                <div class="step-text">Transfer funds to provided payment details</div>
+            </div>
+            <div class="instruction-item">
+                <div class="step-num">4</div>
+                <div class="step-text">Send screenshot of payment to the bot</div>
+            </div>
+            <div class="instruction-item">
+                <div class="step-num">5</div>
+                <div class="step-text">Wait for verification (usually 5-30 minutes)</div>
+            </div>
+        </div>
+
+        <div class="time-notice">
+            Verification time: 5-30 minutes
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn-primary" onclick="openBot()">Open Bot</button>
+            <button class="btn-secondary" onclick="closeDepositModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- PLAY -->
+    <div id="play" class="tab-content active">
+        <div class="balance-chip">
+            <span id="balanceDisplay">50</span>
+            <div class="star-icon"></div>
+        </div>
+
+        <div class="game-box">
+            <div class="grid-5x5" id="gameGrid"></div>
+        </div>
+
+        <div class="controls">
+            <div class="control-box">
+                <div class="control-label">Mines</div>
+                <div class="stepper">
+                    <button class="step-btn" onclick="changeMines(-1)">−</button>
+                    <div class="step-value" id="minesCount">5</div>
+                    <button class="step-btn" onclick="changeMines(1)">+</button>
+                </div>
+            </div>
+
+            <div class="control-box">
+                <div class="control-label">Amount</div>
+                <div class="stepper">
+                    <button class="step-btn" onclick="changeBet(-2)">−</button>
+                    <input type="number" class="bet-input" id="betInput" value="10" min="1" onchange="validateBet()">
+                    <button class="step-btn" onclick="changeBet(2)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-container">
+            <button class="action-btn bet" id="actionBtn" onclick="handleAction()">
+                <span class="btn-main">Bet</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="profile" class="tab-content">
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="avatar-block"></div>
+                <div class="profile-info">
+                    <div class="profile-name">Username</div>
+                    <div class="profile-balance">
+                        <span id="profileBalance">50</span>
+                        <div class="star-icon" style="width:16px;height:16px;"></div>
+                    </div>
+                </div>
+            </div>
+            <button class="deposit-btn" onclick="openDepositModal()">Deposit</button>
+        </div>
+
+        <div class="profile-tabs-container">
+            <button class="profile-tab-btn active" onclick="switchProfileTab('deposits', 0, this)">Deposits</button>
+            <button class="profile-tab-btn" onclick="switchProfileTab('history', 1, this)">History</button>
+            <div class="profile-tab-slider" id="profileSlider"></div>
+        </div>
+
+        <div class="history-list" id="historyList">
+            <div class="empty">No deposits yet</div>
+        </div>
+    </div>
+
+    <!-- Bottom Tabs -->
+    <div class="bottom-tabs">
+        <button class="tab-btn active" onclick="setTab('play', 0)">Play</button>
+        <button class="tab-btn" onclick="setTab('profile', 1)">Profile</button>
+        <div class="tab-slider" id="tabSlider"></div>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        const BOT_USERNAME = "YourBotName";
+        
+        let balance = 50;
+        let minesCount = 5;
+        let currentBet = 10;
+        let isPlaying = false;
+        let mines = [];
+        let revealed = 0;
+        let gameHistory = [];
+        let resetTimer = null;
+
+        function initGrid() {
+            const grid = document.getElementById('gameGrid');
+            grid.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell disabled';
+                cell.dataset.index = i;
+                cell.onclick = () => clickCell(i);
+                grid.appendChild(cell);
+            }
+        }
+
+        function generateMines() {
+            mines = [];
+            const pool = Array.from({length: 25}, (_, i) => i);
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            mines = pool.slice(0, minesCount);
+        }
+
+        function calculateMultiplier(opened) {
+            if (opened === 0) return 1.00;
+            const safe = 25 - minesCount;
+            let prob = 1;
+            for (let i = 0; i < opened; i++) {
+                prob *= (safe - i) / (25 - i);
+            }
+            return Math.min((0.97 / prob), 100).toFixed(2);
+        }
+
+        function clickCell(index) {
+            if (!isPlaying) return;
+            const cell = document.querySelector(`.cell[data-index="${index}"]`);
+            if (cell.classList.contains('revealed')) return;
+
+            if (mines.includes(index)) {
+                cell.classList.add('revealed', 'mine', 'exploded');
+                cell.innerHTML = '<img src="mine.png" alt="">';
+                endGame(false);
+            } else {
+                cell.classList.add('revealed', 'safe');
+                cell.innerHTML = '<img src="water.png" alt="">';
+                revealed++;
+                updateButton();
+            }
+        }
+
+        function updateButton() {
+            const mult = calculateMultiplier(revealed);
+            const win = Math.floor(currentBet * mult);
+            const btn = document.getElementById('actionBtn');
+            btn.innerHTML = `
+                <span class="btn-main">Cash Out</span>
+                <span class="btn-sub">${mult}x | ${win}</span>
+            `;
+        }
+
+        function handleAction() {
+            if (isPlaying) {
+                endGame(true);
+            } else {
+                startGame();
+            }
+        }
+
+        function startGame() {
+            const bet = parseInt(document.getElementById('betInput').value);
+            if (!bet || bet < 1) {
+                alert('Enter valid bet');
+                return;
+            }
+            if (bet > balance) {
+                alert('Insufficient balance');
+                return;
+            }
+
+            if (resetTimer) clearTimeout(resetTimer);
+
+            currentBet = bet;
+            balance -= currentBet;
+            updateBalance();
+
+            revealed = 0;
+            generateMines();
+            isPlaying = true;
+
+            document.querySelectorAll('.cell').forEach(c => {
+                c.className = 'cell';
+                c.innerHTML = '';
+            });
+
+            updateButton();
+            document.getElementById('actionBtn').className = 'action-btn cashout';
+        }
+
+        function endGame(win) {
+            isPlaying = false;
+
+            mines.forEach(pos => {
+                const cell = document.querySelector(`.cell[data-index="${pos}"]`);
+                if (!cell.classList.contains('revealed')) {
+                    cell.classList.add('revealed', 'mine');
+                    cell.innerHTML = '<img src="mine.png" alt="">';
+                }
+            });
+
+            const mult = calculateMultiplier(revealed);
+            const winAmount = Math.floor(currentBet * mult);
+            const btn = document.getElementById('actionBtn');
+
+            if (win) {
+                balance += winAmount;
+                updateBalance();
+                addToHistory('win', winAmount, mult);
+                btn.innerHTML = `<span class="btn-main">Win ${winAmount}!</span>`;
+            } else {
+                addToHistory('loss', currentBet, mult);
+                btn.innerHTML = `<span class="btn-main">Busted!</span>`;
+            }
+
+            btn.className = 'action-btn bet';
+            btn.disabled = true;
+
+            resetTimer = setTimeout(() => {
+                resetGame();
+            }, 2000);
+        }
+
+        function resetGame() {
+            revealed = 0;
+            document.querySelectorAll('.cell').forEach(c => {
+                c.className = 'cell disabled';
+                c.innerHTML = '';
+            });
+            const btn = document.getElementById('actionBtn');
+            btn.disabled = false;
+            btn.className = 'action-btn bet';
+            btn.innerHTML = '<span class="btn-main">Bet</span>';
+        }
+
+        function changeMines(delta) {
+            if (isPlaying) return;
+            const newVal = minesCount + delta;
+            if (newVal >= 1 && newVal <= 24) {
+                minesCount = newVal;
+                document.getElementById('minesCount').textContent = minesCount;
+            }
+        }
+
+        function changeBet(delta) {
+            if (isPlaying) return;
+            const input = document.getElementById('betInput');
+            let val = parseInt(input.value) || 0;
+            val += delta;
+            if (val < 1) val = 1;
+            if (val > balance) val = balance;
+            input.value = val;
+            currentBet = val;
+        }
+
+        function validateBet() {
+            const input = document.getElementById('betInput');
+            let val = parseInt(input.value);
+            if (!val || val < 1) val = 1;
+            if (val > balance) val = balance;
+            input.value = val;
+            currentBet = val;
+        }
+
+        function updateBalance() {
+            document.getElementById('balanceDisplay').textContent = balance;
+            document.getElementById('profileBalance').textContent = balance;
+        }
+
+        function openDepositModal() {
+            document.getElementById('depositOverlay').classList.add('active');
+            document.getElementById('depositModal').classList.add('active');
+        }
+
+        function closeDepositModal() {
+            document.getElementById('depositOverlay').classList.remove('active');
+            document.getElementById('depositModal').classList.remove('active');
+        }
+
+        function openBot() {
+            if (tg) {
+                tg.openTelegramLink(`https://t.me/${BOT_USERNAME}`);
+            } else {
+                window.open(`https://t.me/${BOT_USERNAME}`, '_blank');
+            }
+        }
+
+        function addToHistory(type, amount, multiplier) {
+            const item = {
+                type,
+                amount,
+                multiplier,
+                time: new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}),
+                mines: minesCount
+            };
+            gameHistory.unshift(item);
+            
+            const activeTab = document.querySelector('.profile-tab-btn.active');
+            if (activeTab && activeTab.textContent === 'History') {
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            if (gameHistory.length === 0) {
+                list.innerHTML = '<div class="empty">No games yet</div>';
+                return;
+            }
+            list.innerHTML = gameHistory.map(item => `
+                <div class="history-item">
+                    <div>
+                        <div class="hist-title">${item.type === 'win' ? 'Win' : 'Loss'} ${item.multiplier}x</div>
+                        <div class="hist-meta">${item.mines} mines • ${item.time}</div>
+                    </div>
+                    <div class="hist-amount ${item.type}">
+                        ${item.type === 'win' ? '+' : '-'}${item.amount}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function switchProfileTab(tab, index, btn) {
+            document.querySelectorAll('.profile-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.getElementById('profileSlider').style.transform = `translateX(${index * 100}%)`;
+            
+            const list = document.getElementById('historyList');
+            if (tab === 'deposits') {
+                list.innerHTML = '<div class="empty">No deposits yet</div>';
+            } else {
+                renderHistory();
+            }
+        }
+
+        function setTab(tabName, index) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === index));
+            document.getElementById('tabSlider').style.transform = `translateX(${index * 100}%)`;
+            
+            if (tabName === 'play' && !isPlaying && revealed > 0) {
+                resetGame();
+            }
+        }
+
+        initGrid();
+        
+        if (tg) {
+            tg.expand();
+            tg.ready();
+        }
+    </script>
+
+</body>
+</html>
